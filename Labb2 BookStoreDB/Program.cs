@@ -720,6 +720,7 @@ class Program
             {
                 if (book.Author != null)
                 {
+                    // Use StandardizeISBN to display in standardized format
                     Console.WriteLine($"{StandardizeISBN(book.ISBN13)} - {book.Title} by {book.Author.FirstName} {book.Author.LastName}");
                 }
                 else
@@ -729,13 +730,29 @@ class Program
             }
 
             Console.Write("\nEnter the ISBN of the book you want to modify (without dashes - ): ");
-            string isbn = Console.ReadLine()?.Trim();
+            string isbnInput = Console.ReadLine()?.Trim();
 
-            var selectedBook = context.Books.Include(b => b.Author).FirstOrDefault(b => b.ISBN13 == isbn);
+            // Standardize user input
+            string standardizedIsbn = StandardizeISBN(isbnInput);
+
+            if (string.IsNullOrEmpty(standardizedIsbn))
+            {
+                Console.WriteLine("Invalid ISBN. Please try again.");
+                Console.WriteLine("Press Enter to return to the menu...");
+                Console.ReadLine();
+                return;
+            }
+
+            // Retrieve books into memory and then filter them using StandardizeISBN
+            var selectedBook = context.Books.Include(b => b.Author)
+                .AsEnumerable() // Pull data into memory before filtering
+                .FirstOrDefault(b => StandardizeISBN(b.ISBN13) == standardizedIsbn);
 
             if (selectedBook == null)
             {
-                Console.WriteLine("Book not found.");
+                Console.WriteLine("Book not found. Please check the ISBN and try again.");
+                Console.WriteLine("Press Enter to return to the menu...");
+                Console.ReadLine();
                 return;
             }
 
@@ -772,7 +789,7 @@ class Program
                 {
                     if (selectedBook.Author == null)
                     {
-                        selectedBook.Author = new Author();  
+                        selectedBook.Author = new Author();
                     }
 
                     selectedBook.Author.FirstName = newFirstName;
@@ -799,7 +816,7 @@ class Program
                 if (item.Book != null && item.Book.ISBN13 == selectedBook.ISBN13)
                 {
                     item.Book.Title = selectedBook.Title;
-                    item.Book.Author = selectedBook.Author;  
+                    item.Book.Author = selectedBook.Author;
                 }
             }
             context.SaveChanges();
@@ -818,4 +835,7 @@ class Program
             Environment.Exit(0);
         }
     }
+
+
+
 }
